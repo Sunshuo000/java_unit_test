@@ -29,7 +29,6 @@ public class Main {
 
             // 4. 运行测试收集覆盖率
 
-
             // 5. 导出结果
 
         } catch (Exception e) {
