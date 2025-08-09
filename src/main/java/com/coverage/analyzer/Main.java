@@ -20,7 +20,6 @@ public class Main {
         try {
             // 1. 首先加载Jacoco代理
 
-
             // 2. 解析项目结构
 
             // 3. 初始化方法映射器
