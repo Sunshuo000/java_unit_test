@@ -1,4 +1,3 @@
-// CoverageResult.java
 package com.coverage.analyzer.models;
 
 import java.util.HashMap;

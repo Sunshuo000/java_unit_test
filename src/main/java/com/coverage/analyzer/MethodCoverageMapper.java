@@ -1,130 +1,189 @@
 package com.coverage.analyzer;
 
 import org.objectweb.asm.ClassReader;
-import org.objectweb.asm.tree.ClassNode;
-import org.objectweb.asm.tree.LineNumberNode;
-import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.MethodVisitor;
+import org.objectweb.asm.Opcodes;
+import org.objectweb.asm.commons.MethodRemapper;
+import org.objectweb.asm.commons.Remapper;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class MethodCoverageMapper {
+    public final Map<String, Map<String, int[]>> methodRanges = new ConcurrentHashMap<>();
     public final Map<String, Map<Integer, String>> lineToMethodMap = new ConcurrentHashMap<>();
-    private final Map<String, List<MethodRange>> methodRanges = new ConcurrentHashMap<>();
 
     public void mapProjectClasses(Path projectPath) throws IOException {
         System.out.println("Mapping classes in: " + projectPath);
         long start = System.currentTimeMillis();
         int classCount = 0;
-        int lineCount = 0;
 
         for (Path classFile : (Iterable<Path>) Files.walk(projectPath)
                 .filter(path -> path.toString().endsWith(".class"))
-                .parallel()::iterator) {
+                ::iterator) {
             mapClassFile(classFile);
             classCount++;
-            lineCount += lineToMethodMap.getOrDefault(classFile.getFileName().toString(), new HashMap<>()).size();
+        }
+
+        // 基于方法范围创建行号映射
+        for (Map.Entry<String, Map<String, int[]>> entry : methodRanges.entrySet()) {
+            String className = entry.getKey();
+            Map<String, int[]> methods = entry.getValue();
+            Map<Integer, String> lineMap = new HashMap<>();
+
+            for (Map.Entry<String, int[]> method : methods.entrySet()) {
+                String methodName = method.getKey();
+                int[] range = method.getValue();
+
+                for (int line = range[0]; line <= range[1]; line++) {
+                    lineMap.put(line, methodName);
+                }
+            }
+
+            lineToMethodMap.put(className, lineMap);
+            System.out.println("Created line mapping for " + className +
+                    " with " + lineMap.size() + " entries");
         }
 
         long end = System.currentTimeMillis();
-        System.out.println("Mapped " + classCount + " classes (" + lineCount + " lines) in " + (end - start) + "ms");
+        System.out.println("Mapped " + classCount + " classes in " + (end - start) + "ms");
     }
 
     private void mapClassFile(Path classFile) {
         try (InputStream is = Files.newInputStream(classFile)) {
             ClassReader reader = new ClassReader(is);
+            ClassMethodRangeMapper mapper = new ClassMethodRangeMapper();
+            reader.accept(mapper, ClassReader.SKIP_FRAMES | ClassReader.SKIP_DEBUG);
 
-            // 使用 ASM Tree API 获取行号信息
-            ClassNode classNode = new ClassNode();
-            reader.accept(classNode, ClassReader.SKIP_DEBUG);
-
-            String className = classNode.name.replace('/', '.');
-            Map<Integer, String> lineMap = new HashMap<>();
-            List<MethodRange> ranges = new ArrayList<>();
-
-            for (MethodNode method : (List<MethodNode>) classNode.methods) {
-                // 跳过编译器生成的方法
-                if (method.name.startsWith("lambda$") || method.name.contains("$")) {
-                    continue;
-                }
-
-                // 跳过构造函数和静态初始化块
-                if ("<init>".equals(method.name) || "<clinit>".equals(method.name)) {
-                    continue;
-                }
-
-                // 记录方法的行号
-                if (method.instructions != null) {
-                    method.instructions.forEach(insn -> {
-                        if (insn instanceof LineNumberNode) {
-                            LineNumberNode lineNode = (LineNumberNode) insn;
-                            lineMap.put(lineNode.line, method.name);
-                        }
-                    });
-                }
+            if (!mapper.methodRanges.isEmpty()) {
+                methodRanges.put(mapper.className, mapper.methodRanges);
+                System.out.println("Mapped " + mapper.methodRanges.size() +
+                        " methods for class: " + mapper.className);
             }
-
-            lineToMethodMap.put(className, lineMap);
-            System.out.println("Mapped " + lineMap.size() + " lines for class: " + className);
         } catch (IOException e) {
             System.err.println("Error mapping class: " + classFile);
             e.printStackTrace();
         }
     }
 
+    private static class ClassMethodRangeMapper extends ClassVisitor {
+        String className;
+        Map<String, int[]> methodRanges = new HashMap<>();
+        String currentMethod;
+        int minLine = Integer.MAX_VALUE;
+        int maxLine = Integer.MIN_VALUE;
+
+        public ClassMethodRangeMapper() {
+            super(Opcodes.ASM9);
+        }
+
+        @Override
+        public void visit(int version, int access, String name, String signature,
+                          String superName, String[] interfaces) {
+            this.className = name.replace('/', '.');
+            super.visit(version, access, name, signature, superName, interfaces);
+        }
+
+        @Override
+        public MethodVisitor visitMethod(int access, String name, String descriptor,
+                                         String signature, String[] exceptions) {
+            // 跳过特殊方法
+            if ("<init>".equals(name) || "<clinit>".equals(name) ||
+                    name.startsWith("lambda$") || name.contains("$")) {
+                return null;
+            }
+
+            currentMethod = name;
+            minLine = Integer.MAX_VALUE;
+            maxLine = Integer.MIN_VALUE;
+
+            return new MethodRangeMapper(this);
+        }
+
+        @Override
+        public void visitEnd() {
+            // 保存当前方法范围（如果有）
+            if (minLine != Integer.MAX_VALUE && maxLine != Integer.MIN_VALUE) {
+                methodRanges.put(currentMethod, new int[]{minLine, maxLine});
+            }
+            super.visitEnd();
+        }
+    }
+
+    private static class MethodRangeMapper extends MethodVisitor {
+        private final ClassMethodRangeMapper classMapper;
+
+        public MethodRangeMapper(ClassMethodRangeMapper classMapper) {
+            super(Opcodes.ASM9);
+            this.classMapper = classMapper;
+        }
+
+        @Override
+        public void visitLineNumber(int line, org.objectweb.asm.Label start) {
+            updateLineRange(line);
+            super.visitLineNumber(line, start);
+        }
+
+        @Override
+        public void visitMethodInsn(int opcode, String owner, String name,
+                                    String descriptor, boolean isInterface) {
+            // 方法调用可能会改变行号范围
+            super.visitMethodInsn(opcode, owner, name, descriptor, isInterface);
+        }
+
+        @Override
+        public void visitEnd() {
+            // 保存方法范围
+            if (classMapper.minLine != Integer.MAX_VALUE &&
+                    classMapper.maxLine != Integer.MIN_VALUE) {
+                classMapper.methodRanges.put(
+                        classMapper.currentMethod,
+                        new int[]{classMapper.minLine, classMapper.maxLine}
+                );
+            }
+            super.visitEnd();
+        }
+
+        private void updateLineRange(int line) {
+            if (line < classMapper.minLine) classMapper.minLine = line;
+            if (line > classMapper.maxLine) classMapper.maxLine = line;
+        }
+    }
+
     public String getMethodForLine(String className, int lineNumber) {
-        // 1. 尝试直接行号映射
-        Map<Integer, String> classMap = lineToMethodMap.get(className);
-        if (classMap != null) {
-            String method = classMap.get(lineNumber);
-            if (method != null) {
-                return method;
-            }
+        Map<Integer, String> lineMap = lineToMethodMap.get(className);
+        if (lineMap != null) {
+            return lineMap.get(lineNumber);
         }
 
-        // 2. 尝试方法范围匹配
-        List<MethodRange> ranges = methodRanges.get(className);
+        // 回退到范围匹配
+        Map<String, int[]> ranges = methodRanges.get(className);
         if (ranges != null) {
-            for (MethodRange range : ranges) {
-                if (lineNumber >= range.startLine && lineNumber <= range.endLine) {
-                    return range.methodName;
+            for (Map.Entry<String, int[]> entry : ranges.entrySet()) {
+                int[] range = entry.getValue();
+                if (lineNumber >= range[0] && lineNumber <= range[1]) {
+                    return entry.getKey();
                 }
             }
-        }
-
-        // 3. 尝试最近的映射
-        if (classMap != null) {
-            int closestLine = -1;
-            String closestMethod = null;
-            for (Map.Entry<Integer, String> entry : classMap.entrySet()) {
-                int line = entry.getKey();
-                if (line <= lineNumber && line > closestLine) {
-                    closestLine = line;
-                    closestMethod = entry.getValue();
-                }
-            }
-            return closestMethod;
         }
 
         return null;
     }
 
-    private static class MethodRange {
-        final String methodName;
-        final int startLine;
-        final int endLine;
-
-        MethodRange(String methodName, int startLine, int endLine) {
-            this.methodName = methodName;
-            this.startLine = startLine;
-            this.endLine = endLine;
+    public void printMappingsForClass(String className) {
+        Map<String, int[]> ranges = methodRanges.get(className);
+        if (ranges != null) {
+            System.out.println("Method ranges for " + className + ":");
+            ranges.forEach((method, range) ->
+                    System.out.println("  " + method + ": [" + range[0] + "-" + range[1] + "]"));
+        } else {
+            System.out.println("No mappings found for class: " + className);
         }
     }
 }

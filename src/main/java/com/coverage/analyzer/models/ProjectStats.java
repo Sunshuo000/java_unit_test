@@ -1,4 +1,3 @@
-// ProjectStats.java
 package com.coverage.analyzer.models;
 
 public class ProjectStats {
