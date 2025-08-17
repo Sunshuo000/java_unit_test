@@ -32,6 +32,7 @@ public class Main {
             System.out.println("Project stats: " + stats.getNumJavaFiles() + " files, " +
                     reportedTestCount + " tests");
 
+
             // 3. 运行测试收集覆盖率
             long startTime = System.currentTimeMillis();
             CoverageRunner runner = new CoverageRunner(projectPath, rulesetPath);
