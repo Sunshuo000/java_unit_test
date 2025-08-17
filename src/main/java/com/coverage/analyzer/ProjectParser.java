@@ -34,6 +34,7 @@ public class ProjectParser {
 
     private void processJavaFile(Path javaFile) {
         stats.incrementJavaFiles();
+
         try {
             ParseResult<CompilationUnit> parseResult = new JavaParser().parse(javaFile);
             if (!parseResult.isSuccessful()) {

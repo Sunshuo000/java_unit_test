@@ -20,6 +20,7 @@ public class MethodCoverageMapper {
         System.out.println("Mapping classes in: " + projectPath);
         long start = System.currentTimeMillis();
         int classCount = 0;
+
         for (Path classFile : (Iterable<Path>) Files.walk(projectPath)
                 .filter(path -> path.toString().endsWith(".class"))
                 ::iterator) {

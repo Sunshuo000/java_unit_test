@@ -14,6 +14,7 @@ import java.util.Collection;
 public class CoverageAnalyzer {
     private final ExecutionDataStore executionDataStore;
     private final Path classesDir;
+
     public CoverageAnalyzer(ExecutionDataStore executionDataStore, Path classesDir) {
         this.executionDataStore = executionDataStore;
         this.classesDir = classesDir;

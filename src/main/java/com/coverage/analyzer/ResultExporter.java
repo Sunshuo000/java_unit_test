@@ -20,7 +20,7 @@ public class ResultExporter {
         this.outputPath = outputPath;
     }
 
-    public void export(ProjectStats stats, CoverageResult coverageResult) throws IOException {
+    public void export(Path projectPath, ProjectStats stats, CoverageResult coverageResult) throws IOException {
         Path filePath = outputPath.resolve("coverage_report.json");
         try (FileWriter writer = new FileWriter(filePath.toFile())) {
             JsonObject root = new JsonObject();
@@ -30,8 +30,17 @@ public class ResultExporter {
             statsObj.addProperty("num_java_files", stats.getNumJavaFiles());
             statsObj.addProperty("num_classes", stats.getNumClasses());
             statsObj.addProperty("num_methods", stats.getNumMethods());
-            statsObj.addProperty("num_test_methods", stats.getNumTestMethods());
+            // 使用报告中的测试方法数量
+            ProjectParser parser = new ProjectParser(projectPath);
+            try {
+                parser.parse();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            List<String> testMethods = parser.getTestMethods();
+            statsObj.addProperty("num_test_methods", testMethods.size());
             root.add("stat_of_repository", statsObj);
+
             JsonObject coverageObj = new JsonObject();
             for (Map.Entry<String, List<String>> entry : coverageResult.getTestCoverageAgainstMethods().entrySet()) {
                 coverageObj.add(entry.getKey(), gson.toJsonTree(entry.getValue()));

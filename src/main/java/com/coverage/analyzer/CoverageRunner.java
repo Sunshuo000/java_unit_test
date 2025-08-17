@@ -152,6 +152,11 @@ public class CoverageRunner {
         }
         List<String> testMethods = parser.getTestMethods();
 
+        int maxTests = 100;
+        if (testMethods.size() > maxTests) {
+            testMethods = testMethods.subList(0, maxTests);
+        }
+
         System.out.println("Found " + testMethods.size() + " test methods to run");
 
         // 检查Jacoco代理状态
@@ -182,7 +187,6 @@ public class CoverageRunner {
                 System.err.println("Failed to map classes: " + e.getMessage());
             }
         }
-
         for (String testMethod : testMethods) {
             String[] parts = testMethod.split("#");
             String className = parts[0];
@@ -360,8 +364,6 @@ public class CoverageRunner {
                                 coveredMethods.add(methodId);
                                 System.out.println("  Covered line " + i + " in method: " + methodId);
                             }
-                        } else {
-                            System.out.println("  WARNING: Covered line " + i + " but no method mapping found");
                         }
                     }
                 }

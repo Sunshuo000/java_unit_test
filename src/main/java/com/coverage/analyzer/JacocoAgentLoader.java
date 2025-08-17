@@ -19,6 +19,7 @@ public class JacocoAgentLoader {
                 System.out.println("Jacoco agent loaded via RT. Version: " + agent.getVersion());
             } catch (IllegalStateException rtEx) {
                 System.out.println("Standard loading failed, trying alternative method");
+
                 try {
                     // 2. 备选加载方式
                     String vmName = ManagementFactory.getRuntimeMXBean().getName();
