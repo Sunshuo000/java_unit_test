@@ -32,7 +32,6 @@ public class ResultExporter {
             statsObj.addProperty("num_methods", stats.getNumMethods());
             statsObj.addProperty("num_test_methods", stats.getNumTestMethods());
             root.add("stat_of_repository", statsObj);
-
             JsonObject coverageObj = new JsonObject();
             for (Map.Entry<String, List<String>> entry : coverageResult.getTestCoverageAgainstMethods().entrySet()) {
                 coverageObj.add(entry.getKey(), gson.toJsonTree(entry.getValue()));

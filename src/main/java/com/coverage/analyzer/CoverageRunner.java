@@ -25,7 +25,6 @@ public class CoverageRunner {
     private final Path rulesetPath;
     private final ClassLoader projectClassLoader;
     private int testTimeout = 30;
-
     public CoverageRunner(Path projectPath, Path rulesetPath) throws Exception {
         this.projectPath = projectPath.toAbsolutePath().normalize();
         System.out.println("Normalized project path: " + this.projectPath);

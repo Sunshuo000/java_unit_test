@@ -43,7 +43,6 @@ public class Main {
             System.out.println("执行耗时（秒）: " + durationSec);
         } catch (Exception e) {
             System.err.println("Error during analysis: " + e.getMessage());
-            e.printStackTrace();
             System.exit(1);
         }
     }
