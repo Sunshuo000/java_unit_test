@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.jacoco.agent.rt.IAgent;
 
-
 public class Main {
     public static void main(String[] args) {
         if (args.length < 1) {
@@ -16,20 +15,12 @@ public class Main {
         }
 
         Path projectPath = Paths.get(args[0]);
-        Path outputPath = Paths.get(args[1]);//args.length > 1 ? Paths.get(args[1]) : Paths.get(".");
+        Path outputPath = args.length > 1 ? Paths.get(args[1]) : Paths.get(".");
         Path rulesetPath = args.length > 2 ? Paths.get(args[2]) : null;
 
         try {
-            // 1. 首先加载Jacoco代理
+            // 1. 加载Jacoco代理
             JacocoAgentLoader.loadAgent();
-
-            // 验证代理状态
-            IAgent agent = JacocoAgentLoader.getAgent();
-            if (agent == null) {
-                throw new RuntimeException("Jacoco agent failed to initialize");
-            }
-            System.out.println("Jacoco agent loaded successfully. Version: " + agent.getVersion());
-            System.out.println("Session ID: " + agent.getSessionId());
 
             // 2. 解析项目结构
             ProjectParser parser = new ProjectParser(projectPath);
@@ -38,16 +29,19 @@ public class Main {
                     stats.getNumTestMethods() + " tests");
 
             // 3. 运行测试收集覆盖率
+            long startTime = System.currentTimeMillis();
             CoverageRunner runner = new CoverageRunner(projectPath, rulesetPath);
-            runner.setTestTimeout(120); // 设置2分钟超时
+            runner.setTestTimeout(120);
             CoverageResult coverageResult = runner.collectCoverage();
+            long endTime = System.currentTimeMillis();
+            long durationSec = (endTime - startTime) / 1000;
 
-            // 4. 导出结果
+            // 4. 导出合并结果
             ResultExporter exporter = new ResultExporter(outputPath);
-            exporter.exportProjectStats(stats);
-            exporter.exportCoverage(coverageResult);
+            exporter.export(stats, coverageResult);
 
             System.out.println("Analysis completed successfully!");
+            System.out.println("执行耗时（秒）: " + durationSec);
         } catch (Exception e) {
             System.err.println("Error during analysis: " + e.getMessage());
             e.printStackTrace();

@@ -31,7 +31,11 @@ public class CoverageAnalyzer {
             if (sourceDir.isDirectory()) {
                 System.out.println("Analyzing classes in: " + classesDir);
                 analyzer.analyzeAll(sourceDir);
+            } else {
+                System.out.println("Classes directory is not a directory: " + classesDir);
             }
+        } else {
+            System.out.println("Classes directory not found: " + classesDir);
         }
 
         // 返回所有分析过的类

@@ -6,6 +6,7 @@ import org.jacoco.agent.rt.internal_3570298.core.runtime.AgentOptions;
 import org.jacoco.agent.rt.internal_3570298.Agent;
 
 import java.io.IOException;
+import java.lang.management.ManagementFactory;
 
 public class JacocoAgentLoader {
     private static IAgent agent = null;
@@ -13,23 +14,29 @@ public class JacocoAgentLoader {
     public static synchronized void loadAgent() {
         if (agent == null) {
             try {
-                // 1. 创建代理配置
-                AgentOptions options = new AgentOptions();
-                options.setDestfile("jacoco.exec"); // 设置输出文件
-                options.setOutput(AgentOptions.OutputMode.none); // 禁用文件输出
-                options.setAppend(false);
-
-                agent = Agent.getInstance(options);
-                System.out.println("Jacoco agent initialized. Version: " + agent.getVersion());
-            } catch (Exception e) {
-                System.err.println("Failed to load Jacoco agent: " + e.getMessage());
-                e.printStackTrace();
+                System.out.println("Attempting to load Jacoco agent via standard method");
+                agent = RT.getAgent();
+                System.out.println("Jacoco agent loaded via RT. Version: " + agent.getVersion());
+            } catch (IllegalStateException rtEx) {
+                System.out.println("Standard loading failed, trying alternative method");
 
                 try {
-                    agent = RT.getAgent();
-                    System.out.println("Jacoco agent loaded via RT");
-                } catch (IllegalStateException rtEx) {
-                    throw new RuntimeException("ERROR: Failed to load Jacoco agent via both methods. Please ensure the agent is properly initialized.", rtEx);
+                    // 2. 备选加载方式
+                    String vmName = ManagementFactory.getRuntimeMXBean().getName();
+                    String pid = vmName.split("@")[0];
+
+                    System.out.println("Attempting to load Jacoco agent dynamically for PID: " + pid);
+
+                    AgentOptions options = new AgentOptions();
+                    options.setOutput("none");
+                    options.setAppend(false);
+
+                    agent = Agent.getInstance(options);
+                    System.out.println("Jacoco agent dynamically loaded. Version: " + agent.getVersion());
+                } catch (Exception e) {
+                    System.err.println("Failed to load Jacoco agent: " + e.getMessage());
+                    e.printStackTrace();
+                    throw new RuntimeException("Jacoco agent initialization failed", e);
                 }
             }
         }

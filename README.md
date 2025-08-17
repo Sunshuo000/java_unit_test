@@ -16,6 +16,6 @@ cd C:\Users\lenovo\Desktop\test11\test11
 
 mvn clean package
 
-java -jar target/coverage-analyzer-1.0-SNAP-jar-with-dependencies.jar "C:\Users\wuxiao\Desktop\j Avau\test\test11" "C:\Users\wuxiao\Desktop\javau"
+java -jar target/coverage-analyzer-1.0-SNAPSHOT-jar-with-dependencies.jar "C:\Users\wuxiao\Desktop\j Avau\test\test11" "C:\Users\wuxiao\Desktop\javau"
 
 If the project cannot be compiled, please directly use the compiled jar package provided(coverage-analyzer-1.0-SNAPSHOT-jar-with-dependencies.jar).
