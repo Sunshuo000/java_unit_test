@@ -6,7 +6,6 @@ public class ProjectStats {
     private int numClasses;
     private int numMethods;
     private int numTestMethods;
-
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
 
