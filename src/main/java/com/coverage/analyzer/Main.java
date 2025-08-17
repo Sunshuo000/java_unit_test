@@ -26,7 +26,7 @@ public class Main {
             ProjectStats stats = parser.parse();
 
             // 设置报告中的测试方法数量
-            int reportedTestCount = Math.min(stats.getNumTestMethods(), 100);
+            int reportedTestCount = (stats.getNumTestMethods());
             stats.setReportedTestMethods(reportedTestCount);
 
             System.out.println("Project stats: " + stats.getNumJavaFiles() + " files, " +
