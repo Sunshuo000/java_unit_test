@@ -5,7 +5,6 @@ import com.coverage.analyzer.models.ProjectStats;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import org.jacoco.agent.rt.IAgent;
 
 public class Main {
     public static void main(String[] args) {
