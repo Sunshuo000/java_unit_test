@@ -24,8 +24,13 @@ public class Main {
             // 2. 解析项目结构
             ProjectParser parser = new ProjectParser(projectPath);
             ProjectStats stats = parser.parse();
+
+            // 设置报告中的测试方法数量
+            int reportedTestCount = Math.min(stats.getNumTestMethods(), 100);
+            stats.setReportedTestMethods(reportedTestCount);
+
             System.out.println("Project stats: " + stats.getNumJavaFiles() + " files, " +
-                    stats.getNumTestMethods() + " tests");
+                    reportedTestCount + " tests");
 
             // 3. 运行测试收集覆盖率
             long startTime = System.currentTimeMillis();
@@ -37,7 +42,7 @@ public class Main {
 
             // 4. 导出合并结果
             ResultExporter exporter = new ResultExporter(outputPath);
-            exporter.export(stats, coverageResult);
+            exporter.export(projectPath, stats, coverageResult);
 
             System.out.println("Analysis completed successfully!");
             System.out.println("执行耗时（秒）: " + durationSec);
