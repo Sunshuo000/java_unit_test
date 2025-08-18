@@ -153,7 +153,7 @@ public class CoverageRunner {
         }
         List<String> testMethods = parser.getTestMethods();
 
-        int maxTests = 100;
+        int maxTests = 500;
         if (testMethods.size() > maxTests) {
             testMethods = testMethods.subList(0, maxTests);
         }
